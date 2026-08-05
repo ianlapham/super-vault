@@ -1,107 +1,132 @@
 # Super Vault 🧠
 
-> Your internet rabbit holes, newsletters, bookmarks, videos, and notes—turned into a searchable second brain.
-
-It is a repo and Hermes skill, **not a hosted database and not a copy of anyone else’s reading history**. Install it, connect your own sources, and your vault stays yours.
+Super Vault is a self-hosted source-ingestion and retrieval system for [Hermes Agent](https://github.com/NousResearch/hermes-agent). It collects content from sources you choose, stores the original text and metadata locally, indexes that content for search, and lets Hermes answer questions using the stored sources.
 
 ## Super Vault 🧠
 
-Think of it as a quiet research assistant running in the background:
+Use Super Vault when you want an agent to keep track of information you read or save over time.
 
-- 🌐 **Articles & URLs** — save a page before it disappears into your tabs
-- 🎥 **YouTube** — transcript via [Supadata](https://supadata.ai/) (preferred) or [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api) fallback
-- 📰 **RSS / Atom** — follow blogs and publications with [`feedparser`](https://github.com/kurtmckee/feedparser)
-- ✉️ **Substack** — optional authenticated newsletter intake
-- 🔖 **X bookmarks** — optional intake through [`xurl`](https://github.com/xdevplatform/xurl)
-- 📝 **Pasted notes, PDFs, GitHub READMEs** — anything you want to keep and ask about later
+It can store:
 
-Every item becomes a full Markdown source with clear metadata. The vault can then answer *“what did I save about agent memory?”*, connect people to ideas across sources, or deliver a daily/weekly **Vault Pulse** of genuinely new entries.
+- 🌐 **Web pages and articles** — fetch the page, extract readable text, and save it as Markdown.
+- 🎥 **YouTube videos** — fetch a transcript with [Supadata](https://supadata.ai/) or [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api).
+- 📰 **RSS and Atom feeds** — monitor publications with [`feedparser`](https://github.com/kurtmckee/feedparser) and ingest new articles.
+- ✉️ **Substack posts** — optionally fetch posts from subscribed publications using an authenticated session.
+- 🔖 **X bookmarks** — optionally read a user’s saved X posts through [`xurl`](https://github.com/xdevplatform/xurl).
+- 📝 **Pasted notes, PDFs, and GitHub READMEs** — save material that does not come from a tracked feed.
+
+For each source, the system stores the full source text, URL, title, source type, tags, capture time, and a content hash. It can then search that material by keywords, by semantic similarity, or by relationships between extracted entities.
+
+A **Vault Pulse** is a scheduled digest of new sources added since the last pulse. It is intended to show what entered the vault, not to replace the original source material.
 
 ## Usage ✏️
 
-Super Vault is a [Hermes Agent](https://github.com/NousResearch/hermes-agent) skill. Once installed, it runs wherever you already talk to Hermes: CLI, Discord, Telegram, and more.
+Super Vault installs as a Hermes skill. The skill recognizes `@scan` in any Hermes surface that supports chat messages, including CLI, Discord, and Telegram.
 
 ```text
-@scan https://example.com/great-article
-@scan https://youtube.com/watch?v=...
-@scan Here is a note I never want to lose...
+@scan https://example.com/article
+@scan https://youtube.com/watch?v=VIDEO_ID
+@scan A pasted note or research excerpt
 ```
 
-`@scan` is the front door: Hermes fetches or accepts the **full** source, deduplicates it, saves readable Markdown, and indexes it for later. Background jobs can check feeds, newsletters, and bookmarks; a Vault Pulse sends a short recap rather than another firehose.
+When you use `@scan`, Hermes should:
 
-The Hermes integration is optional. The same folders, Python scripts, SQLite database, Qdrant index, and graph tooling can be adapted to another agent or app.
+1. Fetch the source text or accept the pasted text.
+2. Convert it to clean text when needed.
+3. Normalize the source URL and check whether it was already saved.
+4. Write a Markdown file with YAML metadata.
+5. Add the content to full-text, vector, and graph indexes.
+6. Return the saved or duplicate status and the source location.
 
-### Install shape
+The repository includes the local storage bootstrapper, canonical Markdown saver, web/YouTube scanner, Hermes skill definition, Qdrant Docker service, and local graph viewer. RSS, Substack, X bookmark polling, scheduled pulses, and full Qdrant/LightRAG indexing are connector modules to enable as the project expands.
+
+### Install
 
 ```bash
-# From a GitHub skill tap after this project is published
 hermes skills tap add ianlapham/super-vault
 hermes skills install super-vault
 
-# Create a separate local corpus and start the vector database
+git clone https://github.com/ianlapham/super-vault.git
+cd super-vault
+cp .env.example .env
 python3 scripts/bootstrap.py --root ~/super-vault-data
+```
+
+Start Qdrant when Docker Compose is installed:
+
+```bash
 docker compose up -d
 ```
 
-Copy `.env.example` to `.env` and only add keys for the connectors you enable. Run `python3 -m pytest tests -q` to verify the local core.
+Run the local test suite:
+
+```bash
+python3 -m pytest tests -q
+```
 
 ## Stack 🛠️
 
 ### Ingestion
 
-**Job:** track chosen sources, get the real content, normalize it once.
+**Job: track data sources, fetch their contents, and convert each source into clean text that can be stored and indexed.**
 
-- **Canonical pipeline:** Python `scripts/scan.py` saves one source format for every connector. A URL is canonicalized and deduplicated before it writes.
-- **Web:** [`requests`](https://requests.readthedocs.io/) + [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) extract readable page text.
-- **YouTube:** [Supadata Transcript API](https://docs.supadata.ai/) is the preferred transcript integration; [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api) is a fallback.
-- **RSS:** [`feedparser`](https://github.com/kurtmckee/feedparser) parses RSS/Atom feeds; SQLite remembers what was already seen.
-- **Substack:** an opt-in authenticated API connector fetches subscribed posts; never commit its cookies.
-- **Bookmarks:** [`xurl`](https://github.com/xdevplatform/xurl) can pull a user’s authenticated X bookmarks; it is optional.
+| Source type | How it is fetched and parsed | Technology |
+| --- | --- | --- |
+| Web page | Download HTML, remove navigation/scripts/styles, keep article/main text | [requests](https://requests.readthedocs.io/), [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) |
+| YouTube | Request a transcript, then join transcript segments into text | [Supadata Transcript API](https://docs.supadata.ai/), [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api) fallback |
+| RSS / Atom | Poll feed XML, compare article URLs against saved state, ingest new URLs | [`feedparser`](https://github.com/kurtmckee/feedparser), SQLite |
+| Substack | Use an authenticated Substack session to request post HTML, then convert HTML to text | Substack API, Python `urllib`, Beautiful Soup |
+| X bookmarks | Read authenticated bookmarks and post text, then send each item through the same scan pipeline | [`xurl`](https://github.com/xdevplatform/xurl) |
+| Pasted text | Save the supplied text without fetching a URL | Hermes `@scan` trigger, Python |
+
+All source types should use the same scan pipeline. This gives every source the same metadata format, deduplication rule, storage layout, and indexes.
 
 ### Storage
 
-**Job:** keep durable source material first; treat every database as a rebuildable convenience.
+**Job: smartly store the contents and information for any data source.**
 
-- **Source of truth:** full **Markdown + YAML frontmatter** on your own disk. Each source keeps title, canonical URL, type, capture time, tags, and SHA-256 content hash.
-- **Exact search + state:** [SQLite](https://sqlite.org/) and **FTS5** store source registry, ingest state, and fast keyword/full-text search.
-- **Semantic encoding:** sources are split into small overlapping chunks (~200 words), embedded with an embedding model, and stored in [Qdrant](https://qdrant.tech/). This finds passages by meaning rather than exact wording.
-- **Safety:** raw text lives separately from generated summaries and graphs. Git may back up the code and, only if you choose, a private corpus. `.env`, cookies, vector data, and personal sources stay ignored.
+1. **Markdown files store the source content.** Each source is written as a separate Markdown file. The body contains the full extracted text. YAML frontmatter contains title, original URL, canonical URL, source type, capture time, tags, and SHA-256 content hash.
+2. **SQLite stores source records and full-text search.** SQLite records which URLs were scanned and prevents duplicate saves. Its [FTS5](https://www.sqlite.org/fts5.html) extension indexes titles and source text for fast keyword search.
+3. **Qdrant stores vector embeddings.** The system splits each source into small text chunks (typically about 200 words), creates an embedding for each chunk, and stores that embedding plus source metadata in [Qdrant](https://qdrant.tech/). This supports meaning-based search, such as finding documents about “agent memory” even when they do not use those exact words.
+4. **Raw and derived data stay separate.** Original source text, Markdown, database records, vector embeddings, summaries, and graph data are separate files or stores. If an index is deleted, it can be recreated from the Markdown corpus.
 
 ### Retrieval
 
-**Job:** give an agent the right evidence—not just a plausible answer.
+**Job: find the source text most relevant to a user question and give Hermes enough context to answer with citations.**
 
-1. **FTS5** catches exact names, quotes, and titles.
-2. **Qdrant** finds semantically similar source chunks.
-3. [`sentence-transformers`](https://www.sbert.net/) reranks the candidate passages using `cross-encoder/ms-marco-MiniLM-L-6-v2`.
-4. Hermes receives the best passages with source links and can cite the underlying Markdown.
+1. **Keyword search:** SQLite FTS5 finds exact titles, names, phrases, and terms.
+2. **Semantic search:** Qdrant finds text chunks with similar embedding vectors to the query.
+3. **Reranking:** [`sentence-transformers`](https://www.sbert.net/) scores the candidate chunks again with `cross-encoder/ms-marco-MiniLM-L-6-v2` and keeps the most relevant results.
+4. **Answer generation:** Hermes receives the ranked source passages and their URLs/files, then generates an answer that points back to those sources.
 
-This is RAG with receipts: a short answer should always be traceable back to the saved source.
+Example: a search for “how are AI agents evaluated?” can return a saved article about benchmarks, a newsletter about eval harnesses, and a note that uses the phrase “testing agent behavior,” even if it does not use the exact query wording.
 
 ### Knowledge Graph
 
-**Job:** surface relationships that ordinary search misses.
+**Job: extract entities and relationships from source text so the system can answer connection questions across multiple documents.**
 
-[LightRAG](https://github.com/HKUDS/LightRAG) extracts entities and relations from sources—people, companies, tools, claims, and ideas—then combines graph traversal with vector retrieval.
+[LightRAG](https://github.com/HKUDS/LightRAG) reads saved text and extracts entities such as people, companies, products, concepts, and claims. It also extracts relationships between them.
 
 ```text
-"OpenAI" ── builds ──> "embeddings" ── powers ──> "Qdrant"
-       └── discussed in ──> "a saved newsletter"
+Saved newsletter
+  └─ mentions → OpenAI
+       └─ provides → embedding model
+            └─ indexes text in → Qdrant
 ```
 
-Ask *“what connects agent memory, Qdrant, and this founder?”* and LightRAG can follow those chains across documents. For a visual map, [NetworkX](https://networkx.org/) reads the graph, Louvain community detection groups related regions, and a zero-dependency HTML5 Canvas explorer renders entities, clusters, and search locally.
+A graph query can answer questions such as: “What sources connect OpenAI, embeddings, and Qdrant?” LightRAG combines relationship traversal with vector retrieval, so it can use both graph connections and relevant text passages.
 
-**Visualization:** the included zero-dependency HTML5 Canvas explorer lets you search the metadata-only entity graph locally.
+### Visualization
 
-**Privacy rule:** the visualization payload contains only entity labels, types, community IDs, and edges—never original source text, source URLs, filesystem paths, tokens, or embeddings.
+For visualization, [NetworkX](https://networkx.org/) reads the entity graph, Louvain community detection groups related entities, and the included HTML5 Canvas viewer displays nodes, clusters, and search. The visualization export contains entity labels, types, community IDs, and edges only. It must not include source text, source URLs, filesystem paths, API keys, or embeddings.
 
-## What this repo never ships
+## Data and security boundaries
 
-- Your saved sources, PDFs, notes, or private graph
-- API keys, cookies, X sessions, or `.env`
-- Qdrant/SQLite production data or logs
+This repository contains code and configuration templates only. It does not contain:
 
-Super Vault ships the machine. You bring the memories.
+- Saved sources, notes, PDFs, raw documents, or personal graph data
+- API keys, browser cookies, X sessions, or `.env` files
+- Local SQLite databases, Qdrant data, LightRAG storage, or logs
 
 ## License
 
