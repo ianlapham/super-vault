@@ -37,6 +37,13 @@ def test_installer_creates_isolated_vault_layout(tmp_path):
         assert (tmp_path / relative).exists()
 
 
+def test_bootstrap_creates_an_obsidian_compatible_vault_marker(tmp_path):
+    from scripts.bootstrap import create_layout
+
+    create_layout(tmp_path)
+    assert (tmp_path / "OBSIDIAN.md").exists()
+
+
 def test_agent_install_guide_covers_required_services_and_verification():
     text = (ROOT / "INSTALL_WITH_AGENT.md").read_text()
     for required in [

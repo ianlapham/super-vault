@@ -60,6 +60,12 @@ hermes skills install super-vault
 
 `setup.py` creates a Python environment, installs `requirements.txt`, copies `.env.example` to local `.env`, creates the source/SQLite layout, and starts Qdrant. It stops with an error if Docker is missing; use `--no-qdrant` only when intentionally setting up without vector search.
 
+### Obsidian vault
+
+The Super Vault data directory is already an **Obsidian-compatible Markdown vault**. Set `--root` to a new or existing Obsidian vault folder, then open that same folder in Obsidian. Super Vault writes Markdown directly into it; no separate export or file-sync script is required.
+
+For multi-device sync, choose and configure one external transport in Obsidian: Obsidian Sync, iCloud/Dropbox, or a private Git workflow. The installer does not automate an Obsidian account login or publish personal source files to Git.
+
 ## Stack 🛠️
 
 ### Ingestion

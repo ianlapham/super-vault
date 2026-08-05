@@ -73,6 +73,17 @@ This creates:
 
 Qdrant stores its own vector data in `./.data/qdrant/` inside the repository directory by default. Set `SUPER_VAULT_DATA_DIR` in `.env` if it should live elsewhere.
 
+## 3a. Open the same folder as an Obsidian vault
+
+The directory passed to `--root` is the Markdown corpus and is already Obsidian-compatible. It contains an `OBSIDIAN.md` marker plus the source, note, concept, and digest folders.
+
+1. Install and open Obsidian.
+2. Choose **Open folder as vault**.
+3. Select `~/super-vault-data` (or the custom path passed to `--root`).
+4. Read, edit, tag, and link the Markdown files in Obsidian. Super Vault and Obsidian use the same files.
+
+There is no second “Obsidian sync” process inside Super Vault. For multi-device access, configure **one** sync transport in Obsidian: Obsidian Sync, iCloud/Dropbox, or a private Git workflow. Do not point a public Git repository at a vault containing private sources.
+
 ## 4. Add only the API keys needed for enabled connectors
 
 Add keys to `.env` or the host’s secret manager. A key is required only for the matching feature.
