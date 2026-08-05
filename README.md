@@ -2,8 +2,6 @@
 
 > Your internet rabbit holes, newsletters, bookmarks, videos, and notes—turned into a searchable second brain.
 
-**Super Vault** is a portable, Hermes-native personal knowledge system. It reads the sources you choose, keeps the full original material in a local vault, finds what matters later, and sends a small **Vault Pulse** when new things arrive.
-
 It is a repo and Hermes skill, **not a hosted database and not a copy of anyone else’s reading history**. Install it, connect your own sources, and your vault stays yours.
 
 ## Super Vault 🧠
