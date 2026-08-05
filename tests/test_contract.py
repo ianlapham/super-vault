@@ -46,10 +46,12 @@ def test_vector_and_background_guide_states_current_boundaries():
         assert required in text
 
 
-def test_bootstrap_creates_an_obsidian_compatible_vault_marker(tmp_path):
+def test_obsidian_mode_is_optional(tmp_path):
     from scripts.bootstrap import create_layout
 
     create_layout(tmp_path)
+    assert not (tmp_path / "OBSIDIAN.md").exists()
+    create_layout(tmp_path, obsidian=True)
     assert (tmp_path / "OBSIDIAN.md").exists()
 
 
@@ -65,7 +67,8 @@ def test_agent_install_guide_covers_required_services_and_verification():
 def test_setup_plan_installs_dependencies_initializes_corpus_and_starts_qdrant(tmp_path):
     from scripts.setup import setup_plan
 
-    commands = setup_plan(tmp_path / "vault", start_qdrant=True)
+    commands = setup_plan(tmp_path / "vault", start_qdrant=True, obsidian=True)
+    assert any("--obsidian" in command for command in commands)
     assert any("uv venv" in command for command in commands)
     assert any("uv pip install -r requirements.txt" in command for command in commands)
     assert any("bootstrap.py" in command for command in commands)
