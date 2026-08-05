@@ -122,6 +122,8 @@ Enable one connector at a time and test it before enabling the next.
 
 ## 7. Indexing and retrieval configuration
 
+Read [`docs/VECTOR_AND_BACKGROUND.md`](docs/VECTOR_AND_BACKGROUND.md) for the exact local versus hosted Qdrant configuration and the required QDRANT_URL/QDRANT_API_KEY settings.
+
 Run these layers in order:
 
 1. **Markdown:** save the full normalized source text and YAML frontmatter.

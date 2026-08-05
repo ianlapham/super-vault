@@ -37,6 +37,15 @@ def test_installer_creates_isolated_vault_layout(tmp_path):
         assert (tmp_path / relative).exists()
 
 
+def test_vector_and_background_guide_states_current_boundaries():
+    text = (ROOT / "docs" / "VECTOR_AND_BACKGROUND.md").read_text()
+    for required in [
+        "Local Qdrant", "Qdrant Cloud", "QDRANT_URL", "QDRANT_API_KEY",
+        "Current implementation", "not automatically", "Background jobs",
+    ]:
+        assert required in text
+
+
 def test_bootstrap_creates_an_obsidian_compatible_vault_marker(tmp_path):
     from scripts.bootstrap import create_layout
 

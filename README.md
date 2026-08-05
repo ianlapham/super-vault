@@ -6,6 +6,8 @@ Super Vault is a self-hosted source-ingestion and retrieval system for [Hermes A
 
 For a machine-readable, step-by-step install procedure—including prerequisite checks, Qdrant, API keys, source connectors, indexing, visualization, and verification—use [INSTALL_WITH_AGENT.md](./INSTALL_WITH_AGENT.md). It includes a copy-paste prompt that tells a Hermes agent exactly what to install and what evidence it must return before claiming success.
 
+For local versus hosted Qdrant, embedding collections, and background-job setup, read [VECTOR_AND_BACKGROUND.md](./docs/VECTOR_AND_BACKGROUND.md). It explicitly separates the starter’s current automatic behavior from modules that an agent must configure and test.
+
 ## Super Vault 🧠
 
 Use Super Vault when you want an agent to keep track of information you read or save over time.
