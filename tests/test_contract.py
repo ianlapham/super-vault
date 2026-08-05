@@ -56,6 +56,17 @@ def test_setup_plan_installs_dependencies_initializes_corpus_and_starts_qdrant(t
     assert any("docker compose up -d qdrant" in command for command in commands)
 
 
+def test_setup_dry_run_does_not_create_env_file(tmp_path, monkeypatch):
+    import sys
+    import scripts.setup as setup
+
+    monkeypatch.setattr(setup, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(sys, "argv", ["setup.py", "--root", str(tmp_path / "vault"), "--no-qdrant", "--dry-run"])
+    (tmp_path / ".env.example").write_text("OPENAI_API_KEY=\n")
+    setup.main()
+    assert not (tmp_path / ".env").exists()
+
+
 def test_web_html_extraction_keeps_article_text():
     from scripts.scan import html_to_text
 

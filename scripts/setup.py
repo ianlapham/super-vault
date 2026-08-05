@@ -34,16 +34,20 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true", help="Print setup commands without running them")
     args = parser.parse_args()
     start_qdrant = not args.no_qdrant
-    if start_qdrant and shutil.which("docker") is None:
-        raise SystemExit("Docker is required for Qdrant. Install Docker Compose, or rerun with --no-qdrant.")
-    env_path, example = REPO_ROOT / ".env", REPO_ROOT / ".env.example"
-    if not env_path.exists():
-        env_path.write_text(example.read_text())
-        print(f"Created {env_path}; add only the connector keys you need.")
+    if start_qdrant:
+        docker_ok = shutil.which("docker") is not None and subprocess.run(
+            ["docker", "compose", "version"], capture_output=True
+        ).returncode == 0
+        if not docker_ok:
+            raise SystemExit("Docker Compose is required for Qdrant. Install Docker Compose, or rerun with --no-qdrant.")
     commands = setup_plan(Path(args.root), start_qdrant=start_qdrant)
     if args.dry_run:
         print("\n".join(commands))
         return
+    env_path, example = REPO_ROOT / ".env", REPO_ROOT / ".env.example"
+    if not env_path.exists():
+        env_path.write_text(example.read_text())
+        print(f"Created {env_path}; add only the connector keys you need.")
     for command in commands:
         run(command)
     print(f"Super Vault is ready at {Path(args.root).expanduser()}")

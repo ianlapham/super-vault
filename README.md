@@ -44,29 +44,21 @@ When you use `@scan`, Hermes should:
 
 The repository includes the local storage bootstrapper, canonical Markdown saver, web/YouTube scanner, Hermes skill definition, Qdrant Docker service, and local graph viewer. RSS, Substack, X bookmark polling, scheduled pulses, and full Qdrant/LightRAG indexing are connector modules to enable as the project expands.
 
-### Install
+### Fast local install
+
+The full agent-oriented procedure is in [INSTALL_WITH_AGENT.md](./INSTALL_WITH_AGENT.md). For a normal local install:
 
 ```bash
-hermes skills tap add ianlapham/super-vault
-hermes skills install super-vault
-
 git clone https://github.com/ianlapham/super-vault.git
 cd super-vault
-cp .env.example .env
-python3 scripts/bootstrap.py --root ~/super-vault-data
+python3 scripts/setup.py --root ~/super-vault-data
+
+# Install the Hermes instruction layer, then start a fresh Hermes session.
+hermes skills tap add ianlapham/super-vault
+hermes skills install super-vault
 ```
 
-Start Qdrant when Docker Compose is installed:
-
-```bash
-docker compose up -d
-```
-
-Run the local test suite:
-
-```bash
-python3 -m pytest tests -q
-```
+`setup.py` creates a Python environment, installs `requirements.txt`, copies `.env.example` to local `.env`, creates the source/SQLite layout, and starts Qdrant. It stops with an error if Docker is missing; use `--no-qdrant` only when intentionally setting up without vector search.
 
 ## Stack 🛠️
 
