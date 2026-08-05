@@ -4,12 +4,60 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+
+def html_to_text(html: str) -> str:
+    """Keep readable article content; use stdlib fallback when bs4 is unavailable."""
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+        for tag in soup(["script", "style", "nav", "header", "footer", "aside"]):
+            tag.decompose()
+        root = soup.find("article") or soup.find("main") or soup.body or soup
+        return root.get_text("\n", strip=True)
+    except ImportError:
+        return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html)).strip()
+
+
+def fetch_web(url: str) -> tuple[str, str]:
+    import requests
+    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; SuperVault/0.1)"}, timeout=30)
+    response.raise_for_status()
+    text = html_to_text(response.text)
+    if len(text) < 50:
+        raise ValueError("Could not extract enough article text")
+    try:
+        from bs4 import BeautifulSoup
+        title = BeautifulSoup(response.text, "html.parser").title
+        return (title.get_text(strip=True) if title else url, text)
+    except ImportError:
+        return url, text
+
+
+def fetch_youtube(url: str) -> tuple[str, str]:
+    """Supadata first, then youtube-transcript-api; optional connectors stay optional."""
+    key = os.getenv("SUPADATA_API_KEY")
+    if key:
+        import requests
+        response = requests.get("https://api.supadata.ai/v1/transcript", params={"url": url, "lang": "en"}, headers={"x-api-key": key}, timeout=90)
+        response.raise_for_status()
+        data = response.json()
+        content = data.get("content") or data.get("transcript") or ""
+        if isinstance(content, list):
+            content = "\n".join(str(item.get("text", "")) if isinstance(item, dict) else str(item) for item in content)
+        if len(content) >= 50:
+            return data.get("title") or "YouTube transcript", content
+    from youtube_transcript_api import YouTubeTranscriptApi
+    video_id = urlsplit(url).query.split("v=")[-1] if "v=" in url else url.rstrip("/").split("/")[-1]
+    transcript = YouTubeTranscriptApi().fetch(video_id)
+    return "YouTube transcript", "\n".join(item.text for item in transcript)
 
 
 @dataclass(frozen=True)
@@ -72,15 +120,23 @@ def save_source(*, vault_root: Path, title: str, source_url: str, content: str, 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Save a source to Super Vault")
     parser.add_argument("url")
-    parser.add_argument("--title", required=True)
-    parser.add_argument("--content", required=True, help="Full extracted source text")
+    parser.add_argument("--title", help="Override source title")
+    parser.add_argument("--content", help="Full source text; omit to fetch a web page or YouTube transcript")
     parser.add_argument("--type", default="article")
     parser.add_argument("--tags", default="")
     parser.add_argument("--root", default="~/super-vault-data")
     args = parser.parse_args()
     from bootstrap import create_layout
     root = create_layout(Path(args.root).expanduser())
-    result = save_source(vault_root=root, title=args.title, source_url=args.url, content=args.content, source_type=args.type, tags=[tag.strip() for tag in args.tags.split(",") if tag.strip()])
+    content, title, source_type = args.content, args.title, args.type
+    if not content:
+        if "youtube.com" in args.url or "youtu.be" in args.url:
+            fetched_title, content = fetch_youtube(args.url)
+            source_type = "youtube"
+        else:
+            fetched_title, content = fetch_web(args.url)
+        title = title or fetched_title
+    result = save_source(vault_root=root, title=title or args.url, source_url=args.url, content=content, source_type=source_type, tags=[tag.strip() for tag in args.tags.split(",") if tag.strip()])
     print(f"{result.status}: {result.path}")
 
 

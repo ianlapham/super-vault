@@ -37,6 +37,14 @@ def test_installer_creates_isolated_vault_layout(tmp_path):
         assert (tmp_path / relative).exists()
 
 
+def test_web_html_extraction_keeps_article_text():
+    from scripts.scan import html_to_text
+
+    text = html_to_text("<html><title>Ignored</title><body><nav>Menu</nav><article><h1>Real title</h1><p>Useful source text.</p></article></body></html>")
+    assert "Real title" in text
+    assert "Useful source text." in text
+
+
 def test_visualization_exports_metadata_only(tmp_path):
     from scripts.visualize import build_html
 
