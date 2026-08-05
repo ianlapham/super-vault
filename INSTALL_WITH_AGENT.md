@@ -9,7 +9,7 @@ Install Super Vault from https://github.com/ianlapham/super-vault on this machin
 
 Work in a new directory. Follow INSTALL_WITH_AGENT.md exactly. Use ~/super-vault-data as the data directory unless I give another path. Before changing anything, report which prerequisites are missing. Ask me only for API keys or login steps that cannot be completed by the machine.
 
-Install every required dependency, create the data directory and SQLite database, start Qdrant with Docker Compose, create a local .env from .env.example, and install the Hermes skill. Configure only the source connectors for which I provide credentials. Do not put API keys, cookies, or source data in Git.
+Install every required dependency, create the data directory and SQLite database, start Qdrant with Docker Compose, create a local .env from .env.example, and install the Hermes skill. Configure only the source connectors for which I provide credentials. Then configure automatic reading: persist connector state under the vault state directory, manually prove each reader works, then create Hermes cron jobs for RSS/newsletter/bookmark polling, indexing retries, and Vault Pulse. Do not put API keys, cookies, or source data in Git.
 
 Then run every Verification command. Perform one real @scan on a public web page, confirm a Markdown file and SQLite FTS record exist, confirm Qdrant is healthy, and report the exact local paths and enabled connectors. Do not claim that RSS, Substack, X bookmarks, LightRAG, or scheduled Vault Pulse jobs are enabled unless you configured and tested each one.
 ```
@@ -119,6 +119,54 @@ Enable one connector at a time and test it before enabling the next.
 4. **Substack:** add browser session cookies to a local ignored secret file. Test one subscribed publication before enabling a scheduled poll.
 5. **X bookmarks:** authenticate `xurl` as the owner. Test `xurl whoami`, then ingest one bookmark through the canonical scan pipeline.
 6. **Vault Pulse:** create a Hermes cron only after at least one source connector works. The job should query sources captured since its last run and send a small digest with source links.
+
+## 6a. Configure automatic reading and Vault Pulse
+
+Automatic reading means Hermes checks configured sources on a schedule, runs every new item through the same `@scan` pipeline, and stores the original source text without requiring the owner to send a message. It does **not** mean an LLM silently replaces articles with summaries.
+
+### Required state per connector
+
+Each background reader needs a small private state file under `~/super-vault-data/state/`:
+
+| Reader | Private configuration | Deduplication key | Default schedule |
+| --- | --- | --- | --- |
+| RSS / Atom | `rss-feeds.txt`: one feed URL per line | feed GUID, then canonical article URL | every 6 hours |
+| Substack | authenticated cookie file + followed publication list | post ID or canonical post URL | every 6 hours |
+| X bookmarks | authenticated `xurl` session | X post ID | every 6 hours |
+| Index retry | queue of sources whose vector/graph step failed | source SHA-256 + index status | every 15 minutes |
+| Vault Pulse | last successful pulse timestamp | capture timestamp + source URL | daily or three times daily |
+
+### Required behavior for every reader
+
+For each scheduled run, the reader must:
+
+1. Fetch the source feed/bookmark/publication list.
+2. Compare each item against its state file and SQLite source registry.
+3. Fetch the **full** source content for unseen items.
+4. Call the canonical scan/save path; do not implement a separate save format.
+5. Record success, duplicate, or failure state.
+6. Queue Qdrant and LightRAG indexing after the Markdown file is safe on disk.
+7. Leave a failed index job retryable without deleting the source file.
+
+### Create the schedules only after a manual proof
+
+Use Hermes cron jobs to run each reader. An installation agent must create jobs only after it has manually tested that connector and must record the schedule, source configuration path, and last successful run in `state/`.
+
+Recommended job order:
+
+```text
+1. @scan one public URL manually
+2. enable one RSS feed and run it manually
+3. schedule RSS every 6 hours
+4. add Qdrant indexing and verify a vector exists
+5. add LightRAG and verify entities/relations exist
+6. enable one newsletter or bookmark connector
+7. schedule Vault Pulse only after sources are flowing
+```
+
+### What a Vault Pulse does
+
+The Vault Pulse reads sources captured after its previous successful run, groups them by source/type, and sends a short digest with the original links. It must not surface old files because their filesystem timestamp changed during a reindex.
 
 ## 7. Indexing and retrieval configuration
 

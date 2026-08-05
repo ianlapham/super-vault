@@ -25,6 +25,10 @@ For each source, the system stores the full source text, URL, title, source type
 
 A **Vault Pulse** is a scheduled digest of new sources added since the last pulse. It is intended to show what entered the vault, not to replace the original source material.
 
+### Automatic reading
+
+After a connector is configured and manually verified, Hermes can run it in the background with cron jobs. A reader checks a feed, newsletter, or bookmark list; skips IDs and URLs already recorded in SQLite/state files; fetches full unseen sources; saves them through the same scan pipeline; then queues indexing. [INSTALL_WITH_AGENT.md](./INSTALL_WITH_AGENT.md#6a-configure-automatic-reading-and-vault-pulse) defines the required state, job order, retries, and Pulse behavior.
+
 ## Usage ✏️
 
 Super Vault installs as a Hermes skill. The skill recognizes `@scan` in any Hermes surface that supports chat messages, including CLI, Discord, and Telegram.
