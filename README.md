@@ -2,6 +2,10 @@
 
 Super Vault is a self-hosted source-ingestion and retrieval system for [Hermes Agent](https://github.com/NousResearch/hermes-agent). It collects content from sources you choose, stores the original text and metadata locally, indexes that content for search, and lets Hermes answer questions using the stored sources.
 
+## Install with an agent
+
+For a machine-readable, step-by-step install procedure—including prerequisite checks, Qdrant, API keys, source connectors, indexing, visualization, and verification—use [INSTALL_WITH_AGENT.md](./INSTALL_WITH_AGENT.md). It includes a copy-paste prompt that tells a Hermes agent exactly what to install and what evidence it must return before claiming success.
+
 ## Super Vault 🧠
 
 Use Super Vault when you want an agent to keep track of information you read or save over time.

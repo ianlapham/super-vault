@@ -37,6 +37,25 @@ def test_installer_creates_isolated_vault_layout(tmp_path):
         assert (tmp_path / relative).exists()
 
 
+def test_agent_install_guide_covers_required_services_and_verification():
+    text = (ROOT / "INSTALL_WITH_AGENT.md").read_text()
+    for required in [
+        "Docker Compose", "Qdrant", "OPENAI_API_KEY", "SUPADATA_API_KEY",
+        "uv pip install", "docker compose up -d qdrant", "@scan", "Verification",
+    ]:
+        assert required in text
+
+
+def test_setup_plan_installs_dependencies_initializes_corpus_and_starts_qdrant(tmp_path):
+    from scripts.setup import setup_plan
+
+    commands = setup_plan(tmp_path / "vault", start_qdrant=True)
+    assert any("uv venv" in command for command in commands)
+    assert any("uv pip install -r requirements.txt" in command for command in commands)
+    assert any("bootstrap.py" in command for command in commands)
+    assert any("docker compose up -d qdrant" in command for command in commands)
+
+
 def test_web_html_extraction_keeps_article_text():
     from scripts.scan import html_to_text
 
