@@ -37,7 +37,7 @@ The Hermes integration is optional. The same folders, Python scripts, SQLite dat
 
 ```bash
 # From a GitHub skill tap after this project is published
-hermes skills tap add OWNER/super-vault
+hermes skills tap add ianlapham/super-vault
 hermes skills install super-vault
 
 # Create a separate local corpus and start the vector database
