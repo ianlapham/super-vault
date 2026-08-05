@@ -1,0 +1,8 @@
+beautifulsoup4>=4.12
+feedparser>=6.0
+lightrag-hku>=1.4
+networkx>=3.3
+qdrant-client>=1.12
+requests>=2.32
+sentence-transformers>=3.0
+youtube-transcript-api>=1.0

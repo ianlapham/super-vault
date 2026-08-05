@@ -1,0 +1,10 @@
+.env
+.data/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.sqlite3
+*.db
+*.graphml
+super-vault-data/
+raw/
